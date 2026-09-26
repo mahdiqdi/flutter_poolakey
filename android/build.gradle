@@ -82,11 +82,10 @@ abstract class StripPoolakeyBillingAidlTransform implements TransformAction<Tran
     }
 }
 
-def artifactType = Attribute.of('artifactType', String)
-def poolakeyWithoutBillingAidl = 'poolakey-without-billing-aidl-aar'
+def poolakeyAidlStripped = Attribute.of('poolakeyAidlStripped', Boolean)
 
 group 'ir.cafebazaar.flutter_poolakey'
-version '2.2.3'
+version '2.2.4'
 
 allprojects {
     repositories {
@@ -102,9 +101,21 @@ allprojects {
 }
 
 dependencies {
+    attributesSchema {
+        attribute(poolakeyAidlStripped)
+    }
+    components {
+        withModule('com.github.cafebazaar.Poolakey:poolakey') {
+            allVariants {
+                attributes {
+                    attribute(poolakeyAidlStripped, false)
+                }
+            }
+        }
+    }
     registerTransform(StripPoolakeyBillingAidlTransform) {
-        from.attribute(artifactType, 'aar')
-        to.attribute(artifactType, poolakeyWithoutBillingAidl)
+        from.attribute(poolakeyAidlStripped, false)
+        to.attribute(poolakeyAidlStripped, true)
     }
 }
 
@@ -132,7 +143,7 @@ android {
     defaultConfig {
         minSdkVersion 16
         versionCode 2002001000
-        versionName "2.2.3"
+        versionName "2.2.4"
     }
 
     buildTypes {
@@ -147,7 +158,7 @@ android {
     dependencies {
         implementation("com.github.cafebazaar.Poolakey:poolakey:$poolakey_version") {
             attributes {
-                attribute(artifactType, poolakeyWithoutBillingAidl)
+                attribute(poolakeyAidlStripped, true)
             }
         }
     }
