@@ -1,6 +1,7 @@
-## 2.2.1
+## 2.2.2
 * Update Android build tooling for Gradle 9.3.1, Android Gradle Plugin 9.1.0, Kotlin 2.3.20, compile SDK 36, and Java 17.
 * Replace deprecated JCenter with Maven Central.
+* Remove Poolakey's duplicate legacy billing AIDL classes when Myket billing is also present.
 
 ## 2.2.0+1.0.0
 * Update gradle version to 7.5 #29
