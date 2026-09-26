@@ -14,56 +14,6 @@ import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
-/**
- * Poolakey and Myket's billing client both package Google's legacy billing AIDL
- * classes. Keep the copy supplied by the host app (or Myket) and remove only
- * those duplicate classes from Poolakey's resolved AAR.
- */
-abstract class StripPoolakeyBillingAidlTransform implements TransformAction<TransformParameters.None> {
-    @InputArtifact
-    abstract Provider<FileSystemLocation> getInputArtifact()
-
-    @Override
-    void transform(TransformOutputs outputs) {
-        def inputAar = inputArtifact.get().asFile
-        def outputAar = outputs.file(inputAar.name.replace('.aar', '-without-billing-aidl.aar'))
-
-        new ZipFile(inputAar).withCloseable { aar ->
-            new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(outputAar))).withCloseable { output ->
-                aar.entries().each { aarEntry ->
-                    output.putNextEntry(new ZipEntry(aarEntry.name))
-
-                    if (aarEntry.name == 'classes.jar') {
-                        new ZipInputStream(aar.getInputStream(aarEntry)).withCloseable { classes ->
-                            def transformedJar = new ByteArrayOutputStream()
-                            new ZipOutputStream(transformedJar).withCloseable { transformedClasses ->
-                                ZipEntry classEntry
-                                while ((classEntry = classes.nextEntry) != null) {
-                                    if (!classEntry.name.startsWith('com/android/vending/billing/IInAppBillingService')) {
-                                        transformedClasses.putNextEntry(new ZipEntry(classEntry.name))
-                                        if (!classEntry.directory) {
-                                            classes.transferTo(transformedClasses)
-                                        }
-                                        transformedClasses.closeEntry()
-                                    }
-                                }
-                            }
-                            output.write(transformedJar.toByteArray())
-                        }
-                    } else if (!aarEntry.directory) {
-                        aar.getInputStream(aarEntry).withCloseable { it.transferTo(output) }
-                    }
-
-                    output.closeEntry()
-                }
-            }
-        }
-    }
-}
-
-def artifactType = Attribute.of('artifactType', String)
-def poolakeyWithoutBillingAidl = 'poolakey-without-billing-aidl-aar'
-
 buildscript {
     ext.kotlin_version = "2.3.20"
     ext.poolakey_version = "2.2.0"
@@ -89,8 +39,54 @@ plugins {
     id "kotlin-android"
 }
 
+/**
+ * Poolakey and Myket's billing client both package Google's legacy billing AIDL
+ * classes. Keep the copy supplied by the host app (or Myket) and remove only
+ * those duplicate classes from Poolakey's resolved AAR.
+ */
+abstract class StripPoolakeyBillingAidlTransform implements TransformAction<TransformParameters.None> {
+    @InputArtifact
+    abstract Provider<FileSystemLocation> getInputArtifact()
+
+    @Override
+    void transform(TransformOutputs outputs) {
+        def inputAar = inputArtifact.get().asFile
+        def outputAar = outputs.file(inputAar.name.replace('.aar', '-without-billing-aidl.aar'))
+
+        new ZipFile(inputAar).withCloseable { aar ->
+            new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(outputAar))).withCloseable { output ->
+                aar.entries().each { aarEntry ->
+                    output.putNextEntry(new ZipEntry(aarEntry.name))
+                    if (aarEntry.name == 'classes.jar') {
+                        new ZipInputStream(aar.getInputStream(aarEntry)).withCloseable { classes ->
+                            def transformedJar = new ByteArrayOutputStream()
+                            new ZipOutputStream(transformedJar).withCloseable { transformedClasses ->
+                                ZipEntry classEntry
+                                while ((classEntry = classes.nextEntry) != null) {
+                                    if (!classEntry.name.startsWith('com/android/vending/billing/IInAppBillingService')) {
+                                        transformedClasses.putNextEntry(new ZipEntry(classEntry.name))
+                                        if (!classEntry.directory) classes.transferTo(transformedClasses)
+                                        transformedClasses.closeEntry()
+                                    }
+                                }
+                            }
+                            output.write(transformedJar.toByteArray())
+                        }
+                    } else if (!aarEntry.directory) {
+                        aar.getInputStream(aarEntry).withCloseable { it.transferTo(output) }
+                    }
+                    output.closeEntry()
+                }
+            }
+        }
+    }
+}
+
+def artifactType = Attribute.of('artifactType', String)
+def poolakeyWithoutBillingAidl = 'poolakey-without-billing-aidl-aar'
+
 group 'ir.cafebazaar.flutter_poolakey'
-version '2.2.2'
+version '2.2.3'
 
 allprojects {
     repositories {
@@ -136,7 +132,7 @@ android {
     defaultConfig {
         minSdkVersion 16
         versionCode 2002001000
-        versionName "2.2.2"
+        versionName "2.2.3"
     }
 
     buildTypes {
